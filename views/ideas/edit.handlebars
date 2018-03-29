@@ -6,15 +6,17 @@
 {{/each}}
 <div class="car card-body">
   <h3>Edit Video Idea </h3>
-  <form action="/ideas" method="post">
+  <form action="/ideas/{{idea.id}}?_method=PUT" method="post">
+    <input type="hidden"  name="_method" value="PUT">
     <div class="form-group">
       <label for="title">Title </label>
       <input type="text" class="form-control" required=true name="title" value="{{idea.title}}">
     </div>
     <div class="form-group">
-      <label for="deatils">Deatils </label>
+      <label for="deatils">Details </label>
       <textarea class="form-control" required=true name="details" value="{{idea.deatils}}"></textarea>
       <button type="submit">Submit </button>
     </div>
   </form>
+
 </div>
