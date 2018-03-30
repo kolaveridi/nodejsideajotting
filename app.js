@@ -17,6 +17,8 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 // method override middleware
 app.use(methodOverride('_method'))
+// authentication ensureAuthenticated
+const ensureAuthenticated=require('./helpers/auth');
 //expressjs session middleware copied from https://github.com/expressjs/session
 app.use(session({
   secret: 'secret',
@@ -69,30 +71,40 @@ app.get('/home',function(req,res){
   res.render('home');
 })
 //add idea form
-app.get('/ideas/add',function(req,res){
+app.get('/ideas/add',ensureAuthenticated,function(req,res){
   res.render('ideas/add');
 })
 //edit idea form
-app.get('/ideas/edit/:id',function(req,res){
+app.get('/ideas/edit/:id',ensureAuthenticated,function(req,res){
   Idea.findOne({
     _id:req.params.id
   })
   .then(idea=>{
-    res.render('ideas/edit',{
-      idea:idea
-    });
+    if(idea.user!=req.user.id){
+      req.flash('error_msg','Not authorized');
+      res.redirect('/ideas');
+
+    }
+   else{
+     res.render('ideas/edit',{
+       idea:idea
+     });
+   }
   });
 });
 // idea page
-app.get('/ideas',function(req,res){
-  Idea.find({}).sort({date:'desc'}).then(ideas=>{
+app.get('/ideas',ensureAuthenticated,function(req,res){
+  //here user with a specific id can only see his ideas so that's why have user :req.user.id
+  Idea.find({user:req.user.id})
+  .sort({date:'desc'})
+  .then(ideas=>{
     res.render('ideas/index',{
       ideas:ideas
     });
   })
 });
 // process form
-app.post('/ideas',function(req,res){
+app.post('/ideas',ensureAuthenticated,function(req,res){
   var  errors=[];
   if(!req.body.title && !req.body.deatils){
     errors.push({text:'Please Add a title'});
@@ -109,7 +121,8 @@ app.post('/ideas',function(req,res){
   else{
     const newUser={
       title:req.body.title,
-      details:req.body.details
+      details:req.body.details,
+      user:req.user.id
     }
     new Idea(newUser)
     .save().
@@ -118,7 +131,7 @@ app.post('/ideas',function(req,res){
   }
 });
 //https://github.com/expressjs/method-override
-app.put('/ideas/:id',function(req,res){
+app.put('/ideas/:id',ensureAuthenticated,function(req,res){
   Idea.findOne({
     _id:req.params.id
   }).
@@ -132,7 +145,7 @@ app.put('/ideas/:id',function(req,res){
   });
 });
 // delete  ideas
-app.delete('/ideas/:id',function(req,res){
+app.delete('/ideas/:id',ensureAuthenticated,function(req,res){
   Idea.remove({
   _id:req.params.id
 }).then(()=>{
@@ -150,6 +163,7 @@ app.get('/users/logout',function(req,res){
   req.flash('success_msg','You are logged out');
   res.redirect('/users/login');
 })
+
 // users login post
 app.post('/users/login',function(req,res,next){
  passport.authenticate('local', {
